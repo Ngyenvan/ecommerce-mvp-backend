@@ -1,0 +1,114 @@
+﻿syntax = "proto3";
+
+package ecommerce.product.v1;
+
+service ProductService {
+  rpc ListProducts(ListProductsRequest) returns (ListProductsResponse);
+  rpc GetProduct(GetProductRequest) returns (ProductResponse);
+  rpc CreateProduct(CreateProductRequest) returns (ProductResponse);
+  rpc UpdateProduct(UpdateProductRequest) returns (ProductResponse);
+  rpc DeleteProduct(DeleteProductRequest) returns (DeleteProductResponse);
+
+  rpc ReserveInventory(ReserveInventoryRequest)
+      returns (ReserveInventoryResponse);
+  rpc ConfirmInventoryReservation(ConfirmInventoryReservationRequest)
+      returns (InventoryReservationResponse);
+  rpc ReleaseInventoryReservation(ReleaseInventoryReservationRequest)
+      returns (InventoryReservationResponse);
+}
+
+message ListProductsRequest {
+  int32 page = 1;
+  int32 page_size = 2;
+  string search = 3;
+}
+
+message ListProductsResponse {
+  repeated Product products = 1;
+  int32 total = 2;
+  int32 page = 3;
+  int32 page_size = 4;
+}
+
+message GetProductRequest {
+  int32 pid = 1;
+}
+
+message CreateProductRequest {
+  string pname = 1;
+  string price = 2;
+  int32 quantity = 3;
+}
+
+message UpdateProductRequest {
+  int32 pid = 1;
+  optional string pname = 2;
+  optional string price = 3;
+  optional int32 quantity = 4;
+  optional bool is_active = 5;
+}
+
+message ProductResponse {
+  Product product = 1;
+}
+
+message Product {
+  int32 pid = 1;
+  string pname = 2;
+  string price = 3;
+  int32 quantity = 4;
+  bool is_active = 5;
+  string created_at = 6;
+  string updated_at = 7;
+}
+
+message DeleteProductRequest {
+  int32 pid = 1;
+}
+
+message DeleteProductResponse {
+  bool deleted = 1;
+}
+
+message ReserveInventoryRequest {
+  repeated InventoryItem items = 1;
+}
+
+message InventoryItem {
+  int32 pid = 1;
+  int32 qty = 2;
+}
+
+message ReserveInventoryResponse {
+  string reservation_id = 1;
+  InventoryReservationStatus status = 2;
+  repeated ReservedProduct products = 3;
+}
+
+message ReservedProduct {
+  int32 pid = 1;
+  string pname = 2;
+  string unit_price = 3;
+  int32 qty = 4;
+}
+
+message ConfirmInventoryReservationRequest {
+  string reservation_id = 1;
+}
+
+message ReleaseInventoryReservationRequest {
+  string reservation_id = 1;
+  string reason = 2;
+}
+
+message InventoryReservationResponse {
+  string reservation_id = 1;
+  InventoryReservationStatus status = 2;
+}
+
+enum InventoryReservationStatus {
+  INVENTORY_RESERVATION_STATUS_UNSPECIFIED = 0;
+  INVENTORY_RESERVATION_STATUS_RESERVED = 1;
+  INVENTORY_RESERVATION_STATUS_CONFIRMED = 2;
+  INVENTORY_RESERVATION_STATUS_RELEASED = 3;
+}

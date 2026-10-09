@@ -1,0 +1,14 @@
+{
+  "name": "@ecommerce/contracts",
+  "version": "1.0.0",
+  "description": "Shared gRPC contracts for the ecommerce MVP",
+  "scripts": {
+    "test": "node scripts/validate-contracts.cjs"
+  },
+  "license": "ISC",
+  "type": "commonjs",
+  "private": true,
+  "devDependencies": {
+    "@grpc/proto-loader": "^0.8.1"
+  }
+}

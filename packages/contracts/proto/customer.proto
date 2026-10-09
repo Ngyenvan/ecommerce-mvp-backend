@@ -1,0 +1,99 @@
+﻿syntax = "proto3";
+
+package ecommerce.customer.v1;
+
+service CustomerService {
+  rpc CreateCustomer(CreateCustomerRequest) returns (CustomerResponse);
+  rpc GetCustomer(GetCustomerRequest) returns (CustomerResponse);
+  rpc UpdateCustomer(UpdateCustomerRequest) returns (CustomerResponse);
+  rpc GetCustomerMembership(GetCustomerMembershipRequest)
+      returns (CustomerMembershipResponse);
+  rpc AdjustCustomerScore(AdjustCustomerScoreRequest)
+      returns (CustomerMembershipResponse);
+  rpc ListMembershipTiers(ListMembershipTiersRequest)
+      returns (ListMembershipTiersResponse);
+  rpc CreateMembershipTier(CreateMembershipTierRequest)
+      returns (MembershipTierResponse);
+  rpc UpdateMembershipTier(UpdateMembershipTierRequest)
+      returns (MembershipTierResponse);
+}
+
+message CreateCustomerRequest {
+  int32 uid = 1;
+  string full_name = 2;
+  string email = 3;
+  string phone = 4;
+}
+
+message GetCustomerRequest {
+  int32 uid = 1;
+}
+
+message UpdateCustomerRequest {
+  int32 uid = 1;
+  optional string full_name = 2;
+  optional string email = 3;
+  optional string phone = 4;
+}
+
+message CustomerResponse {
+  Customer customer = 1;
+}
+
+message Customer {
+  int32 uid = 1;
+  string full_name = 2;
+  string email = 3;
+  string phone = 4;
+  int32 score = 5;
+  MembershipTier membership = 6;
+  string created_at = 7;
+  string updated_at = 8;
+}
+
+message GetCustomerMembershipRequest {
+  int32 uid = 1;
+}
+
+message AdjustCustomerScoreRequest {
+  int32 uid = 1;
+  int32 score_delta = 2;
+  string reason = 3;
+  string reference_id = 4;
+}
+
+message CustomerMembershipResponse {
+  int32 uid = 1;
+  int32 score = 2;
+  MembershipTier membership = 3;
+}
+
+message MembershipTier {
+  int32 mid = 1;
+  string name = 2;
+  int32 min_score = 3;
+  string discount_percent = 4;
+}
+
+message ListMembershipTiersRequest {}
+
+message ListMembershipTiersResponse {
+  repeated MembershipTier memberships = 1;
+}
+
+message CreateMembershipTierRequest {
+  string name = 1;
+  int32 min_score = 2;
+  string discount_percent = 3;
+}
+
+message UpdateMembershipTierRequest {
+  int32 mid = 1;
+  optional string name = 2;
+  optional int32 min_score = 3;
+  optional string discount_percent = 4;
+}
+
+message MembershipTierResponse {
+  MembershipTier membership = 1;
+}

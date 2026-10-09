@@ -1,0 +1,72 @@
+﻿syntax = "proto3";
+
+package ecommerce.shipment.v1;
+
+service ShipmentService {
+  rpc GetShipment(GetShipmentRequest) returns (ShipmentResponse);
+  rpc GetShipmentByOrderId(GetShipmentByOrderIdRequest)
+      returns (ShipmentResponse);
+  rpc ListShipments(ListShipmentsRequest) returns (ListShipmentsResponse);
+  rpc UpdateShipmentStatus(UpdateShipmentStatusRequest)
+      returns (ShipmentResponse);
+}
+
+message GetShipmentRequest {
+  int32 shipid = 1;
+}
+
+message GetShipmentByOrderIdRequest {
+  int32 oid = 1;
+}
+
+message ListShipmentsRequest {
+  int32 page = 1;
+  int32 page_size = 2;
+  optional ShipmentStatus status = 3;
+  optional int32 oid = 4;
+}
+
+message ListShipmentsResponse {
+  repeated Shipment shipments = 1;
+  int32 total = 2;
+  int32 page = 3;
+  int32 page_size = 4;
+}
+
+message UpdateShipmentStatusRequest {
+  int32 shipid = 1;
+  ShipmentStatus status = 2;
+  string note = 3;
+  int32 updated_by_uid = 4;
+}
+
+message ShipmentResponse {
+  Shipment shipment = 1;
+}
+
+message Shipment {
+  int32 shipid = 1;
+  int32 oid = 2;
+  int32 customer_uid = 3;
+  ShipmentStatus status = 4;
+  repeated TrackingEvent tracking = 5;
+  string created_at = 6;
+  string updated_at = 7;
+}
+
+message TrackingEvent {
+  ShipmentStatus status = 1;
+  string note = 2;
+  int32 updated_by_uid = 3;
+  string occurred_at = 4;
+}
+
+enum ShipmentStatus {
+  SHIPMENT_STATUS_UNSPECIFIED = 0;
+  SHIPMENT_STATUS_PENDING = 1;
+  SHIPMENT_STATUS_PROCESSING = 2;
+  SHIPMENT_STATUS_SHIPPED = 3;
+  SHIPMENT_STATUS_DELIVERED = 4;
+  SHIPMENT_STATUS_FAILED = 5;
+  SHIPMENT_STATUS_CANCELLED = 6;
+}
