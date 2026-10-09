@@ -7,3 +7,5 @@ coverage/
 *.log
 .idea/
 .vscode/
+apps/*/src/generated/
+*.tsbuildinfo

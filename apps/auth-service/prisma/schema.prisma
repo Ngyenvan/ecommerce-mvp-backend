@@ -1,0 +1,32 @@
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Role {
+  roleid   Int    @id @default(autoincrement())
+  rolename String @unique @db.VarChar(50)
+  users    User[]
+
+  @@map("roles")
+}
+
+model User {
+  uid          Int       @id @default(autoincrement())
+  username     String    @unique @db.VarChar(50)
+  passwordHash String    @map("password_hash") @db.VarChar(255)
+  roleid       Int       @map("role_id")
+  isActive     Boolean   @default(true) @map("is_active")
+  lastLoginAt  DateTime? @map("last_login_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  role         Role      @relation(fields: [roleid], references: [roleid], onDelete: Restrict, onUpdate: Cascade)
+
+  @@index([roleid])
+  @@map("users")
+}
