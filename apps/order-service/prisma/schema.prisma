@@ -1,0 +1,73 @@
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum OrderStatus {
+  CREATED
+  CANCELLED
+}
+
+enum OutboxStatus {
+  AWAITING_CONFIRMATION
+  PENDING
+  PROCESSING
+  PUBLISHED
+  FAILED
+}
+
+model Order {
+  oid                    Int           @id @default(autoincrement())
+  uid                    Int
+  clientRequestId        String        @unique @map("client_request_id") @db.VarChar(100)
+  inventoryReservationId String        @map("inventory_reservation_id") @db.VarChar(100)
+  subtotal               Decimal       @db.Decimal(14, 2)
+  discountPercent        Decimal       @map("discount_percent") @db.Decimal(5, 2)
+  discountAmount         Decimal       @map("discount_amount") @db.Decimal(14, 2)
+  totalAmount            Decimal       @map("total_amount") @db.Decimal(14, 2)
+  status                 OrderStatus   @default(CREATED)
+  details                OrderDetail[]
+  createdAt              DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt              DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@index([uid, createdAt])
+  @@index([inventoryReservationId])
+  @@map("orders")
+}
+
+model OrderDetail {
+  oid       Int
+  pid       Int
+  pname     String  @db.VarChar(100)
+  qty       Int
+  unitPrice Decimal @map("unit_price") @db.Decimal(14, 2)
+  lineTotal Decimal @map("line_total") @db.Decimal(14, 2)
+  order     Order   @relation(fields: [oid], references: [oid], onDelete: Cascade)
+
+  @@id([oid, pid])
+  @@map("order_details")
+}
+
+model OutboxEvent {
+  eventId       String       @id @default(uuid()) @map("event_id") @db.Uuid
+  aggregateId   Int          @map("aggregate_id")
+  eventType     String       @map("event_type") @db.VarChar(100)
+  payload       Json         @db.JsonB
+  status        OutboxStatus @default(AWAITING_CONFIRMATION)
+  attempts      Int          @default(0)
+  nextAttemptAt DateTime?    @map("next_attempt_at") @db.Timestamptz(3)
+  lockedAt      DateTime?    @map("locked_at") @db.Timestamptz(3)
+  publishedAt   DateTime?    @map("published_at") @db.Timestamptz(3)
+  lastError     String?      @map("last_error") @db.Text
+  createdAt     DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime     @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@index([status, nextAttemptAt, createdAt])
+  @@index([aggregateId])
+  @@map("outbox_events")
+}

@@ -1,0 +1,5 @@
+-- AlterEnum
+ALTER TYPE "OutboxStatus" ADD VALUE 'AWAITING_CONFIRMATION';
+
+-- AlterTable
+ALTER TABLE "outbox_events" ALTER COLUMN "status" SET DEFAULT 'AWAITING_CONFIRMATION';
