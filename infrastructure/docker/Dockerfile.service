@@ -1,0 +1,42 @@
+FROM node:24.19.0-alpine3.23 AS build
+
+RUN apk add --no-cache openssl
+
+WORKDIR /workspace
+
+COPY package.json package-lock.json ./
+COPY apps ./apps
+COPY packages ./packages
+
+RUN npm ci
+
+ENV DATABASE_URL="postgresql://placeholder:placeholder@localhost:5432/placeholder"
+
+RUN cd apps/auth-service \
+    && npx prisma generate --config prisma.config.ts
+
+RUN cd apps/customer-service \
+    && npx prisma generate --config prisma.config.ts
+
+RUN cd apps/order-service \
+    && npx prisma generate --config prisma.config.ts
+
+ARG SERVICE_NAME
+
+RUN test -n "${SERVICE_NAME}"
+
+RUN npm run build --workspace "${SERVICE_NAME}"
+
+FROM node:24.19.0-alpine3.23 AS runtime
+
+RUN apk add --no-cache openssl
+
+WORKDIR /workspace
+
+ARG SERVICE_NAME
+ENV SERVICE_NAME="${SERVICE_NAME}"
+ENV NODE_ENV="production"
+
+COPY --from=build /workspace /workspace
+
+CMD ["sh", "-c", "node /workspace/apps/${SERVICE_NAME}/dist/main.js"]

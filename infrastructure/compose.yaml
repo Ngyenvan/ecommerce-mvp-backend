@@ -13,7 +13,11 @@ services:
     volumes:
       - auth-db-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}",
+        ]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -32,7 +36,11 @@ services:
     volumes:
       - customer-db-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}",
+        ]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -51,7 +59,11 @@ services:
     volumes:
       - order-db-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}",
+        ]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -122,7 +134,11 @@ services:
     volumes:
       - redis-data:/data
     healthcheck:
-      test: ["CMD-SHELL", "redis-cli -a \"$${REDIS_PASSWORD}\" ping | grep PONG"]
+      test:
+        [
+          "CMD-SHELL",
+          "redis-cli -a \"$${REDIS_PASSWORD}\" ping | grep PONG",
+        ]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -158,6 +174,247 @@ services:
         ]
       interval: 10s
       timeout: 10s
+      retries: 12
+      start_period: 20s
+    networks:
+      - ecommerce-network
+
+  auth-service:
+    build:
+      context: ..
+      dockerfile: infrastructure/docker/Dockerfile.service
+      args:
+        SERVICE_NAME: auth-service
+    image: ecommerce-auth-service:local
+    container_name: ecommerce-auth-service
+    working_dir: /workspace/apps/auth-service
+    command:
+      [
+        "sh",
+        "-c",
+        "npx prisma migrate deploy --config prisma.config.ts && npm run prisma:seed && node dist/main.js",
+      ]
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: "postgresql://${AUTH_DB_USER}:${AUTH_DB_PASSWORD}@auth-db:5432/${AUTH_DB_NAME}?schema=public"
+      JWT_ACCESS_SECRET: "${JWT_ACCESS_SECRET}"
+      AUTH_GRPC_URL: "0.0.0.0:50051"
+    ports:
+      - "50051:50051"
+    depends_on:
+      auth-db:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "node -e \"const n=require('node:net');const s=n.connect(50051,'127.0.0.1',()=>{s.end();process.exit(0)});s.on('error',()=>process.exit(1));\"",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    networks:
+      - ecommerce-network
+
+  customer-service:
+    build:
+      context: ..
+      dockerfile: infrastructure/docker/Dockerfile.service
+      args:
+        SERVICE_NAME: customer-service
+    image: ecommerce-customer-service:local
+    container_name: ecommerce-customer-service
+    working_dir: /workspace/apps/customer-service
+    command:
+      [
+        "sh",
+        "-c",
+        "npx prisma migrate deploy --config prisma.config.ts && npm run prisma:seed && node dist/main.js",
+      ]
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: "postgresql://${CUSTOMER_DB_USER}:${CUSTOMER_DB_PASSWORD}@customer-db:5432/${CUSTOMER_DB_NAME}?schema=public"
+      CUSTOMER_GRPC_URL: "0.0.0.0:50052"
+    ports:
+      - "50052:50052"
+    depends_on:
+      customer-db:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "node -e \"const n=require('node:net');const s=n.connect(50052,'127.0.0.1',()=>{s.end();process.exit(0)});s.on('error',()=>process.exit(1));\"",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    networks:
+      - ecommerce-network
+
+  product-service:
+    build:
+      context: ..
+      dockerfile: infrastructure/docker/Dockerfile.service
+      args:
+        SERVICE_NAME: product-service
+    image: ecommerce-product-service:local
+    container_name: ecommerce-product-service
+    environment:
+      NODE_ENV: production
+      MONGODB_URI: "mongodb://${PRODUCT_MONGO_USER}:${PRODUCT_MONGO_PASSWORD}@product-db:27017/${PRODUCT_MONGO_DATABASE}?authSource=admin"
+      PRODUCT_GRPC_URL: "0.0.0.0:50053"
+    ports:
+      - "50053:50053"
+    depends_on:
+      product-db:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "node -e \"const n=require('node:net');const s=n.connect(50053,'127.0.0.1',()=>{s.end();process.exit(0)});s.on('error',()=>process.exit(1));\"",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    networks:
+      - ecommerce-network
+
+  order-service:
+    build:
+      context: ..
+      dockerfile: infrastructure/docker/Dockerfile.service
+      args:
+        SERVICE_NAME: order-service
+    image: ecommerce-order-service:local
+    container_name: ecommerce-order-service
+    working_dir: /workspace/apps/order-service
+    command:
+      [
+        "sh",
+        "-c",
+        "npx prisma migrate deploy --config prisma.config.ts && node dist/main.js",
+      ]
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: "postgresql://${ORDER_DB_USER}:${ORDER_DB_PASSWORD}@order-db:5432/${ORDER_DB_NAME}?schema=public"
+      ORDER_GRPC_URL: "0.0.0.0:50054"
+      CUSTOMER_GRPC_URL: "customer-service:50052"
+      PRODUCT_GRPC_URL: "product-service:50053"
+      KAFKA_BROKERS: "kafka:19092"
+      ORDER_CREATED_TOPIC: "order-created"
+      OUTBOX_POLL_INTERVAL_MS: "1000"
+      OUTBOX_BATCH_SIZE: "10"
+      OUTBOX_LOCK_TIMEOUT_MS: "60000"
+    ports:
+      - "50054:50054"
+    depends_on:
+      order-db:
+        condition: service_healthy
+      customer-service:
+        condition: service_healthy
+      product-service:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "node -e \"const n=require('node:net');const s=n.connect(50054,'127.0.0.1',()=>{s.end();process.exit(0)});s.on('error',()=>process.exit(1));\"",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    networks:
+      - ecommerce-network
+
+  shipment-service:
+    build:
+      context: ..
+      dockerfile: infrastructure/docker/Dockerfile.service
+      args:
+        SERVICE_NAME: shipment-service
+    image: ecommerce-shipment-service:local
+    container_name: ecommerce-shipment-service
+    environment:
+      NODE_ENV: production
+      MONGODB_URI: "mongodb://${SHIPMENT_MONGO_USER}:${SHIPMENT_MONGO_PASSWORD}@shipment-db:27017/${SHIPMENT_MONGO_DATABASE}?authSource=admin"
+      SHIPMENT_GRPC_URL: "0.0.0.0:50055"
+      KAFKA_BROKERS: "kafka:19092"
+      ORDER_CREATED_TOPIC: "order-created"
+      SHIPMENT_CONSUMER_GROUP: "ecommerce-shipment-service"
+    ports:
+      - "50055:50055"
+    depends_on:
+      shipment-db:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "node -e \"const n=require('node:net');const s=n.connect(50055,'127.0.0.1',()=>{s.end();process.exit(0)});s.on('error',()=>process.exit(1));\"",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    networks:
+      - ecommerce-network
+
+  api-gateway:
+    build:
+      context: ..
+      dockerfile: infrastructure/docker/Dockerfile.service
+      args:
+        SERVICE_NAME: api-gateway
+    image: ecommerce-api-gateway:local
+    container_name: ecommerce-api-gateway
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      AUTH_GRPC_URL: "auth-service:50051"
+      CUSTOMER_GRPC_URL: "customer-service:50052"
+      PRODUCT_GRPC_URL: "product-service:50053"
+      ORDER_GRPC_URL: "order-service:50054"
+      SHIPMENT_GRPC_URL: "shipment-service:50055"
+      JWT_ACCESS_SECRET: "${JWT_ACCESS_SECRET}"
+      JWT_ISSUER: "ecommerce-auth-service"
+      JWT_AUDIENCE: "ecommerce-api"
+      REDIS_URL: "redis://:${REDIS_PASSWORD}@redis:6379"
+      CACHE_TTL_SECONDS: "60"
+      RATE_LIMIT_WINDOW_SECONDS: "60"
+      RATE_LIMIT_MAX_REQUESTS: "100"
+    ports:
+      - "3000:3000"
+    depends_on:
+      auth-service:
+        condition: service_healthy
+      customer-service:
+        condition: service_healthy
+      product-service:
+        condition: service_healthy
+      order-service:
+        condition: service_healthy
+      shipment-service:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "node -e \"fetch('http://127.0.0.1:3000/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1));\"",
+        ]
+      interval: 10s
+      timeout: 5s
       retries: 12
       start_period: 20s
     networks:
