@@ -1,0 +1,51 @@
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Membership {
+  mid             Int        @id @default(autoincrement())
+  name            String     @unique @map("mname") @db.VarChar(50)
+  minScore        Int        @unique @map("min_score")
+  discountPercent Decimal    @map("discount_percent") @db.Decimal(5, 2)
+  customers       Customer[]
+  createdAt       DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@map("memberships")
+}
+
+model Customer {
+  uid              Int               @id
+  fullName         String            @map("fullname") @db.VarChar(100)
+  email            String            @unique @db.VarChar(255)
+  phone            String            @unique @db.VarChar(20)
+  score            Int               @default(0)
+  membershipId     Int               @map("mid")
+  membership       Membership        @relation(fields: [membershipId], references: [mid], onDelete: Restrict)
+  scoreAdjustments ScoreAdjustment[]
+  createdAt        DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime          @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@index([membershipId])
+  @@map("customers")
+}
+
+model ScoreAdjustment {
+  id          Int      @id @default(autoincrement())
+  uid         Int
+  scoreDelta  Int      @map("score_delta")
+  reason      String   @db.VarChar(255)
+  referenceId String   @map("reference_id") @db.VarChar(100)
+  customer    Customer @relation(fields: [uid], references: [uid], onDelete: Cascade)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@unique([uid, referenceId])
+  @@index([uid])
+  @@map("score_adjustments")
+}
